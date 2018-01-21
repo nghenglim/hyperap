@@ -1,42 +1,51 @@
 extern crate hyper;
 extern crate futures;
 extern crate open;
+// extern crate diesel;
+// use self::diesel::sqlite::SqliteConnection;
+// use self::diesel::connection::Connection;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use self::futures::future::Future;  
 use self::hyper::server::{Http, Request, Response, Service};
 use self::hyper::{Method, StatusCode};
 use std::sync::Arc;
 
-pub struct RouteFuncParam {
+pub struct RouteFuncParam<'a, D: 'a> {
     pub req: Request,
+    pub app: &'a D,
 }
-struct Route {
+struct Route<D> {
     method: Method,
     path: String,
-    func: Arc<Fn(RouteFuncParam) -> Response>,
+    func: Arc<Fn(RouteFuncParam<D>) -> Response>,
 }
-pub struct FawkesApp {
+pub struct FawkesApp<D> {
     port: u16,
+    app: D,
     open_browser: bool,
-    routes: Vec<Route>,
-    default_route: Arc<Fn(RouteFuncParam) -> Response>
+    routes: Vec<Route<D>>,
+    default_route: Arc<Fn(RouteFuncParam<D>) -> Response>,
 }
-
-pub fn not_found_route(_a: RouteFuncParam) -> Response {
+pub fn not_found_route<D>(_a: RouteFuncParam<D>) -> Response {
     Response::new().with_status(StatusCode::NotFound)
 }
 
-impl FawkesApp {
-    pub fn new() -> FawkesApp {
+impl<D> FawkesApp<D> where D: 'static, {
+    pub fn new(d: D) -> FawkesApp<D> {
         FawkesApp {
             port: 3000,
+            app: d,
             open_browser: true,
             routes: Vec::new(),
-            default_route: Arc::new(not_found_route)
+            default_route: Arc::new(not_found_route),
         }
     }
+    // pub fn add_db_connection<F: 'static>(&mut self, func: F) -> &mut Self where F: Fn() -> SqliteConnection {
+    //     self.db_connection = Arc::new(func);
+    //     self
+    // }
     pub fn add_route<F: 'static>(&mut self, method: &Method, path: &str, func: F) -> &mut Self where
-    F: Fn(RouteFuncParam) -> Response {
+    F: Fn(RouteFuncParam<D>) -> Response {
         let route = Route {
             method: method.to_owned(),
             path: path.to_owned(),
@@ -85,7 +94,7 @@ impl FawkesApp {
         let _server = server.run().unwrap();
     }
 }
-fn matched_index(v: &Vec<Route>, i: usize, method: Method, path: String) -> usize {
+fn matched_index<D>(v: &Vec<Route<D>>, i: usize, method: Method, path: String) -> usize {
     if v.len() == i {
         i
     } else {
@@ -97,7 +106,7 @@ fn matched_index(v: &Vec<Route>, i: usize, method: Method, path: String) -> usiz
         }
     }
 }
-impl Service for FawkesApp {
+impl<D> Service for FawkesApp<D> where D: 'static {
     // boilerplate hooking up hyper's server types
     type Request = Request;
     type Response = Response;
@@ -110,6 +119,7 @@ impl Service for FawkesApp {
         let path = req.path().to_owned();
         let param = RouteFuncParam {
             req: req,
+            app: &self.app,
         };
         let matched_index = matched_index(&(self.routes), 0, method, path);
         let response = if (self.routes).len() == 0 {
