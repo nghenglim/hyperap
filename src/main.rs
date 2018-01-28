@@ -1,11 +1,11 @@
-extern crate fawkes;
-use fawkes::hyper::server::{Response};
-use fawkes::hyper::{Method};
-use fawkes::server::{FawkesApp, RouteFuncParam};
-use fawkes::response::{resp};
+extern crate hyperap;
+use hyperap::hyper::server::{Response};
+use hyperap::hyper::{Method};
+use hyperap::server::{HyperApp, RouteFuncParam};
+use hyperap::response::{resp};
 
 fn get_static(_req: RouteFuncParam<App>) -> Response {
-    fawkes::server::static_file("Cargo.toml")
+    hyperap::server::static_file("Cargo.toml")
 }
 fn hello_world(a: RouteFuncParam<App>) -> Response {
     resp(a.app.hello.as_str())
@@ -17,7 +17,7 @@ fn main() {
     let the_app = App {
         hello: "Hello World".to_owned(),
     };
-    let mut app = FawkesApp::new(the_app);
+    let mut app = HyperApp::new(the_app);
     app.open_browser(true);
     app.add_route(&Method::Get, "/static", get_static);
     app.add_route(&Method::Get, "/", hello_world);

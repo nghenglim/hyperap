@@ -1,5 +1,5 @@
 ## INTRO
-A very minimal wrapper for Hyper.rs to create aworking webserver
+Hyperap - Hyper wrapper. A very minimal wrapper for Hyper.rs to create a working webserver. 
 
 ## TODO
 - Better Dependency Injection

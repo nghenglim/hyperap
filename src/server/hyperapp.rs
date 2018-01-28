@@ -19,7 +19,7 @@ struct Route<D> {
     path: String,
     func: Arc<Fn(RouteFuncParam<D>) -> Response>,
 }
-pub struct FawkesApp<D> {
+pub struct HyperApp<D> {
     port: u16,
     app: D,
     open_browser: bool,
@@ -30,9 +30,9 @@ pub fn not_found_route<D>(_a: RouteFuncParam<D>) -> Response {
     Response::new().with_status(StatusCode::NotFound)
 }
 
-impl<D> FawkesApp<D> where D: 'static, {
-    pub fn new(d: D) -> FawkesApp<D> {
-        FawkesApp {
+impl<D> HyperApp<D> where D: 'static, {
+    pub fn new(d: D) -> HyperApp<D> {
+        HyperApp {
             port: 3000,
             app: d,
             open_browser: true,
@@ -106,7 +106,7 @@ fn matched_index<D>(v: &Vec<Route<D>>, i: usize, method: Method, path: String) -
         }
     }
 }
-impl<D> Service for FawkesApp<D> where D: 'static {
+impl<D> Service for HyperApp<D> where D: 'static {
     // boilerplate hooking up hyper's server types
     type Request = Request;
     type Response = Response;
