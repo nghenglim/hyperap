@@ -8,7 +8,7 @@ fn get_static(_req: RouteFuncParam<App>) -> Response {
     hyperap::server::static_file("Cargo.toml")
 }
 fn hello_world(a: RouteFuncParam<App>) -> Response {
-    resp(a.app.hello.as_str())
+    resp(a.app.hello.clone())
 }
 pub struct App {
     pub hello: String,

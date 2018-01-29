@@ -44,11 +44,11 @@ impl<D> HyperApp<D> where D: 'static, {
     //     self.db_connection = Arc::new(func);
     //     self
     // }
-    pub fn add_route<F: 'static>(&mut self, method: &Method, path: &str, func: F) -> &mut Self where
+    pub fn add_route<F: 'static, S: Into<String>>(&mut self, method: &Method, path: S, func: F) -> &mut Self where
     F: Fn(RouteFuncParam<D>) -> Response {
         let route = Route {
             method: method.to_owned(),
-            path: path.to_owned(),
+            path: path.into(),
             func: Arc::new(func),
         };
         self.routes.push(route);
