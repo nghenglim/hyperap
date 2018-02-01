@@ -32,6 +32,6 @@ fn main() {
 ~~~
 
 ## TODO
-- Better Dependency Injection
-- Database pooling usage
-- Testing in real project
+- [ ] more functional on the add_route
+- [ ] route is able to specify the GET/POST definition, do validation before go into controller
+- [ ] all the routing is able to generate into a swagger file

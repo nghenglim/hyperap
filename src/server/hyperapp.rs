@@ -10,42 +10,37 @@ use self::hyper::server::{Http, Request, Response, Service};
 use self::hyper::{Method, StatusCode};
 use std::sync::Arc;
 
-pub struct RouteFuncParam<'a, D: 'a> {
-    pub req: Request,
-    pub app: &'a D,
-}
-struct Route<D> {
+struct Route<D> where D: Middleware + 'static {
     method: Method,
     path: String,
-    func: Arc<Fn(RouteFuncParam<D>) -> Response>,
+    func: Arc<Fn(D::M) -> Response>,
 }
-pub struct HyperApp<D> {
+pub struct HyperApp<D> where D: Middleware + 'static {
     port: u16,
     app: D,
     open_browser: bool,
     routes: Vec<Route<D>>,
-    default_route: Arc<Fn(RouteFuncParam<D>) -> Response>,
+    default_route: Arc<Fn(D::M) -> Response>,
 }
-pub fn not_found_route<D>(_a: RouteFuncParam<D>) -> Response {
+pub fn not_found_route<D>(_a: D) -> Response  where D: 'static {
     Response::new().with_status(StatusCode::NotFound)
 }
-
-impl<D> HyperApp<D> where D: 'static, {
+pub trait Middleware {
+    type M;
+    fn middleware(&self, req: Request) -> Self::M;
+}
+impl<D> HyperApp<D> where D: Middleware + 'static, {
     pub fn new(d: D) -> HyperApp<D> {
         HyperApp {
             port: 3000,
             app: d,
             open_browser: true,
             routes: Vec::new(),
-            default_route: Arc::new(not_found_route),
+            default_route: Arc::new(not_found_route::<D::M>),
         }
     }
-    // pub fn add_db_connection<F: 'static>(&mut self, func: F) -> &mut Self where F: Fn() -> SqliteConnection {
-    //     self.db_connection = Arc::new(func);
-    //     self
-    // }
     pub fn add_route<F: 'static, S: Into<String>>(&mut self, method: &Method, path: S, func: F) -> &mut Self where
-    F: Fn(RouteFuncParam<D>) -> Response {
+    F: Fn(D::M) -> Response {
         let route = Route {
             method: method.to_owned(),
             path: path.into(),
@@ -94,7 +89,7 @@ impl<D> HyperApp<D> where D: 'static, {
         let _server = server.run().unwrap();
     }
 }
-fn matched_index<D>(v: &Vec<Route<D>>, i: usize, method: Method, path: String) -> usize {
+fn matched_index<D>(v: &Vec<Route<D>>, i: usize, method: Method, path: String) -> usize where D: Middleware + 'static {
     if v.len() == i {
         i
     } else {
@@ -106,7 +101,7 @@ fn matched_index<D>(v: &Vec<Route<D>>, i: usize, method: Method, path: String) -
         }
     }
 }
-impl<D> Service for HyperApp<D> where D: 'static {
+impl<D> Service for HyperApp<D> where D: Middleware + 'static {
     // boilerplate hooking up hyper's server types
     type Request = Request;
     type Response = Response;
@@ -117,18 +112,15 @@ impl<D> Service for HyperApp<D> where D: 'static {
     fn call(&self, req: Request) -> Self::Future {
         let method = req.method().to_owned();
         let path = req.path().to_owned();
-        let param = RouteFuncParam {
-            req: req,
-            app: &self.app,
-        };
+        let a = self.app.middleware(req);
         let matched_index = matched_index(&(self.routes), 0, method, path);
         let response = if (self.routes).len() == 0 {
-            (self.default_route)(param)
+            (self.default_route)(a)
         } else if matched_index == (self.routes).len() {
-            (self.default_route)(param)
+            (self.default_route)(a)
         } else {
             let r = &(self.routes)[matched_index];
-            (r.func)(param)
+            (r.func)(a)
         };
 
         Box::new(futures::future::ok(response))
