@@ -10,6 +10,9 @@ fn get_static(_a: MiddlewareResult) -> Response {
 fn hello_world(a: MiddlewareResult) -> Response {
     resp(a.hello.clone() + " at path " + &a.path)
 }
+fn not_found_route(a: MiddlewareResult) -> Response {
+    resp("not found route at path ".to_owned() + &a.path)
+}
 pub struct App {
     pub hello: String,
 }
@@ -32,6 +35,7 @@ fn main() {
     };
     let mut app = HyperApp::new(the_app);
     app.open_browser(true);
+    app.set_default_route(not_found_route);
     app.add_route(&Method::Get, "/static", get_static);
     app.add_route(&Method::Get, "/", hello_world);
     app.port(3000);

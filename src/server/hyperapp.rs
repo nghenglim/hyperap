@@ -49,6 +49,11 @@ impl<D> HyperApp<D> where D: Middleware + 'static, {
         self.routes.push(route);
         self
     }
+    pub fn set_default_route<F: 'static>(&mut self, func: F) -> &mut Self where
+    F: Fn(D::M) -> Response {
+        self.default_route = Arc::new(func);
+        self
+    }
     pub fn production(&mut self) -> &mut Self {
         self.open_browser = false;
         self
