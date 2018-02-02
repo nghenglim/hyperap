@@ -1,9 +1,6 @@
 extern crate hyper;
 extern crate futures;
 extern crate open;
-// extern crate diesel;
-// use self::diesel::sqlite::SqliteConnection;
-// use self::diesel::connection::Connection;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use self::futures::future::Future;  
 use self::hyper::server::{Http, Request, Response, Service};
