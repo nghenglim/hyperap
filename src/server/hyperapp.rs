@@ -36,10 +36,10 @@ impl<D> HyperApp<D> where D: Middleware + 'static, {
             default_route: Arc::new(not_found_route::<D::M>),
         }
     }
-    pub fn add_route<F: 'static, S: Into<String>>(&mut self, method: &Method, path: S, func: F) -> &mut Self where
+    pub fn add_route<F: 'static, S: Into<String>>(&mut self, method: Method, path: S, func: F) -> &mut Self where
     F: Fn(D::M) -> Response {
         let route = Route {
-            method: method.to_owned(),
+            method: method,
             path: path.into(),
             func: Arc::new(func),
         };
