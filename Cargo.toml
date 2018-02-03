@@ -2,6 +2,9 @@
 name = "hyperap"
 version = "0.1.0"
 authors = ["Ng Heng Lim <nghenglim@gmail.com>"]
+license = "MIT"
+description = "Hyperap - Hyper wrapper. A very minimal wrapper for Hyper.rs to create a working webserver."
+repository = "https://github.com/nghenglim/hyperap"
 
 [dependencies]
 hyper = "0.11.2"
