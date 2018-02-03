@@ -18,16 +18,16 @@ pub struct App {
 }
 pub struct MiddlewareResult {
     path: String,
-    pub hello: String,
+    hello: String,
 }
-#[derive(Clone)]
+#[derive(Debug)]
 pub struct RouteDefinition {
     parameters: Vec<RouteDefinitionParameters>
 }
-#[derive(Clone)]
+#[derive(Debug)]
 pub struct RouteDefinitionParameters {
-    _in: String,
-    _name: String,
+    in_: String,
+    name: String,
 }
 impl Middleware for App {
     type M = MiddlewareResult;
@@ -47,13 +47,13 @@ fn main() {
     let mut app = HyperApp::new(the_app);
     app.open_browser(true);
     app.set_default_route(not_found_route);
-    app.add_route(Method::Get, "/static", get_static, vec![RouteDefinition {
+    app.add_pure_route(Method::Get, "/static", get_static);
+    app.add_route(Method::Get, "/", hello_world, vec![RouteDefinition {
         parameters: vec![RouteDefinitionParameters {
-            _in: "query".to_owned(),
-            _name: "offset".to_owned(),
+            in_: "query".to_owned(),
+            name: "offset".to_owned(),
         }]
     }]);
-    app.add_pure_route(Method::Get, "/", hello_world);
     app.port(3000);
     app.run();
 }

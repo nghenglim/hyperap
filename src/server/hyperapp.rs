@@ -10,7 +10,7 @@ use std::sync::Arc;
 struct Route<D> where D: Middleware + 'static {
     method: Method,
     path: String,
-    definitions: Vec<D::R>,
+    definitions: Arc<Vec<D::R>>,
     func: Arc<Fn(D::M) -> Response>,
 }
 pub struct HyperApp<D> where D: Middleware + 'static {
@@ -25,14 +25,14 @@ pub fn not_found_route<D>(_a: D) -> Response  where D: 'static {
 }
 pub struct MiddlewareParam<M, R> {
     pub req: Request,
-    pub route_definitions: Vec<R>,
+    pub route_definitions: Arc<Vec<R>>,
     pub func: Arc<Fn(M) -> Response>,
 }
 pub trait Middleware {
     // the main param type that is being obtained by controller
     type M; 
     // the route definition such as swagger definition which is mainly for middleware to use
-    type R: Clone; 
+    type R; 
     fn middleware(&self, param: MiddlewareParam<Self::M, Self::R>) -> Response;
 }
 impl<D> HyperApp<D> where D: Middleware + 'static, {
@@ -50,7 +50,7 @@ impl<D> HyperApp<D> where D: Middleware + 'static, {
         let route = Route {
             method: method,
             path: path.into(),
-            definitions: definitions,
+            definitions: Arc::new(definitions),
             func: Arc::new(func),
         };
         self.routes.push(route);
@@ -61,7 +61,7 @@ impl<D> HyperApp<D> where D: Middleware + 'static, {
         let route = Route {
             method: method,
             path: path.into(),
-            definitions: Vec::new(),
+            definitions: Arc::new(Vec::new()),
             func: Arc::new(func),
         };
         self.routes.push(route);
@@ -140,20 +140,20 @@ impl<D> Service for HyperApp<D> where D: Middleware + 'static {
             self.app.middleware(MiddlewareParam {
                 req: req,
                 func: self.default_route.clone(),
-                route_definitions: Vec::new(),
+                route_definitions: Arc::new(Vec::new()),
             })
-        } else if matched_index == (self.routes).len() {
+        } else if matched_index >= (self.routes).len() {
             self.app.middleware(MiddlewareParam {
                 req: req,
                 func: self.default_route.clone(),
-                route_definitions: Vec::new(),
+                route_definitions: Arc::new(Vec::new()),
             })
         } else {
             let r = &(self.routes)[matched_index];
             self.app.middleware(MiddlewareParam {
                 req: req,
                 func: r.func.clone(),
-                route_definitions: r.definitions.clone(),
+                route_definitions: (r.definitions).clone(),
             })
         };
 
