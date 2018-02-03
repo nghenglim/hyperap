@@ -3,6 +3,7 @@ use hyperap::hyper::server::{Response, Request};
 use hyperap::hyper::{Method};
 use hyperap::server::{HyperApp, Middleware};
 use hyperap::response::{resp};
+use std::sync::Arc;
 
 fn get_static(_a: MiddlewareResult) -> Response {
     hyperap::server::static_file("Cargo.toml")
@@ -22,11 +23,12 @@ pub struct MiddlewareResult {
 }
 impl Middleware for App {
     type M = MiddlewareResult;
-    fn middleware(&self, req: Request) -> Self::M {
-        MiddlewareResult {
+    fn middleware(&self, req: Request, f: Arc<Fn(Self::M) -> Response>) -> Response {
+        let m = MiddlewareResult {
             path: req.path().to_owned(),
             hello: self.hello.clone(),
-        }
+        };
+        f(m)
     }
 }
 fn main() {

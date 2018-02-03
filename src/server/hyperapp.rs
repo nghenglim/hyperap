@@ -24,7 +24,7 @@ pub fn not_found_route<D>(_a: D) -> Response  where D: 'static {
 }
 pub trait Middleware {
     type M;
-    fn middleware(&self, req: Request) -> Self::M;
+    fn middleware(&self, req: Request, f: Arc<Fn(Self::M) -> Response>) -> Response;
 }
 impl<D> HyperApp<D> where D: Middleware + 'static, {
     pub fn new(d: D) -> HyperApp<D> {
@@ -114,15 +114,14 @@ impl<D> Service for HyperApp<D> where D: Middleware + 'static {
     fn call(&self, req: Request) -> Self::Future {
         let method = req.method().to_owned();
         let path = req.path().to_owned();
-        let a = self.app.middleware(req);
         let matched_index = matched_index(&(self.routes), 0, method, path);
         let response = if (self.routes).len() == 0 {
-            (self.default_route)(a)
+            self.app.middleware(req, self.default_route.clone())
         } else if matched_index == (self.routes).len() {
-            (self.default_route)(a)
+            self.app.middleware(req, self.default_route.clone())
         } else {
             let r = &(self.routes)[matched_index];
-            (r.func)(a)
+            self.app.middleware(req, r.func.clone())
         };
 
         Box::new(futures::future::ok(response))
