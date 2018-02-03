@@ -10,6 +10,7 @@ use std::sync::Arc;
 struct Route<D> where D: Middleware + 'static {
     method: Method,
     path: String,
+    definitions: Vec<D::R>,
     func: Arc<Fn(D::M) -> Response>,
 }
 pub struct HyperApp<D> where D: Middleware + 'static {
@@ -22,9 +23,17 @@ pub struct HyperApp<D> where D: Middleware + 'static {
 pub fn not_found_route<D>(_a: D) -> Response  where D: 'static {
     Response::new().with_status(StatusCode::NotFound)
 }
+pub struct MiddlewareParam<M, R> {
+    pub req: Request,
+    pub route_definitions: Vec<R>,
+    pub func: Arc<Fn(M) -> Response>,
+}
 pub trait Middleware {
-    type M;
-    fn middleware(&self, req: Request, f: Arc<Fn(Self::M) -> Response>) -> Response;
+    // the main param type that is being obtained by controller
+    type M; 
+    // the route definition such as swagger definition which is mainly for middleware to use
+    type R: Clone; 
+    fn middleware(&self, param: MiddlewareParam<Self::M, Self::R>) -> Response;
 }
 impl<D> HyperApp<D> where D: Middleware + 'static, {
     pub fn new(d: D) -> HyperApp<D> {
@@ -36,11 +45,23 @@ impl<D> HyperApp<D> where D: Middleware + 'static, {
             default_route: Arc::new(not_found_route::<D::M>),
         }
     }
-    pub fn add_route<F: 'static, S: Into<String>>(&mut self, method: Method, path: S, func: F) -> &mut Self where
+    pub fn add_route<F: 'static, S: Into<String>>(&mut self, method: Method, path: S, func: F, definitions: Vec<D::R>) -> &mut Self where
     F: Fn(D::M) -> Response {
         let route = Route {
             method: method,
             path: path.into(),
+            definitions: definitions,
+            func: Arc::new(func),
+        };
+        self.routes.push(route);
+        self
+    }
+    pub fn add_pure_route<F: 'static, S: Into<String>>(&mut self, method: Method, path: S, func: F) -> &mut Self where
+    F: Fn(D::M) -> Response {
+        let route = Route {
+            method: method,
+            path: path.into(),
+            definitions: Vec::new(),
             func: Arc::new(func),
         };
         self.routes.push(route);
@@ -116,12 +137,24 @@ impl<D> Service for HyperApp<D> where D: Middleware + 'static {
         let path = req.path().to_owned();
         let matched_index = matched_index(&(self.routes), 0, method, path);
         let response = if (self.routes).len() == 0 {
-            self.app.middleware(req, self.default_route.clone())
+            self.app.middleware(MiddlewareParam {
+                req: req,
+                func: self.default_route.clone(),
+                route_definitions: Vec::new(),
+            })
         } else if matched_index == (self.routes).len() {
-            self.app.middleware(req, self.default_route.clone())
+            self.app.middleware(MiddlewareParam {
+                req: req,
+                func: self.default_route.clone(),
+                route_definitions: Vec::new(),
+            })
         } else {
             let r = &(self.routes)[matched_index];
-            self.app.middleware(req, r.func.clone())
+            self.app.middleware(MiddlewareParam {
+                req: req,
+                func: r.func.clone(),
+                route_definitions: r.definitions.clone(),
+            })
         };
 
         Box::new(futures::future::ok(response))
