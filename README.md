@@ -1,4 +1,6 @@
-## INTRO
+# Hyperap
+[![crates.io](http://meritbadge.herokuapp.com/hyper)](https://crates.io/crates/hyperap)
+
 Hyperap - Hyper wrapper. A very minimal wrapper for Hyper.rs to create a working webserver. 
 
 ## How To Use
