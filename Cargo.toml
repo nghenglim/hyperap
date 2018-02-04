@@ -1,13 +1,12 @@
 [package]
 name = "hyperap"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Ng Heng Lim <nghenglim@gmail.com>"]
 license = "MIT"
 description = "Hyperap - Hyper wrapper. A very minimal wrapper for Hyper.rs to create a working webserver."
 repository = "https://github.com/nghenglim/hyperap"
 
 [dependencies]
-hyper = "0.11.2"
+hyper = "0.11.13"
 futures = "0.1.14"
-dotenv = "0.9.0"
 open = "1.2.1"

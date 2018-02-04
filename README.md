@@ -55,12 +55,12 @@ fn main() {
     app.open_browser(true);
     app.set_default_route(not_found_route);
     app.add_pure_route(Method::Get, "/static", get_static);
-    app.add_route(Method::Get, "/", hello_world, vec![RouteDefinition {
+    app.add_route(Method::Get, "/", hello_world, RouteDefinition {
         parameters: vec![RouteDefinitionParameters {
             in_: "query".to_owned(),
             name: "offset".to_owned(),
         }]
-    }]);
+    });
     app.port(3000);
     app.run();
 }
