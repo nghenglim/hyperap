@@ -1,10 +1,11 @@
 extern crate hyperap;
 extern crate futures;
-use hyperap::hyper::server::{Response};
+use hyperap::hyper::server::{Response, Request};
 use hyperap::hyper::{self, Method, StatusCode};
-use hyperap::server::{Hyperap, HyperapCore, MiddlewareParam};
+use hyperap::server::{Hyperap, HyperapCore};
 use hyperap::response::{resp};
 use futures::future::Future;  
+use std::sync::Arc;
 
 fn get_static(_a: MiddlewareResult) -> Response {
     hyperap::server::static_file("Cargo.toml")
@@ -35,12 +36,12 @@ impl HyperapCore for App {
     fn default_route(_a: Self::M) -> Self::Resp {
         Response::new().with_status(StatusCode::NotFound)
     }
-    fn middleware(&self, p: MiddlewareParam<Self::M, Self::R, Self::Resp>) -> Box<Future<Item = Response, Error = hyper::Error>> {
+    fn middleware(&self, req: Request, func: Arc<Fn(Self::M) -> Self::Resp>, _route_definition: Arc<Option<Self::R>>) -> Box<Future<Item = Response, Error = hyper::Error>> {
         let m = Self::M {
-            path: p.req.path().to_owned(),
+            path: req.path().to_owned(),
             hello: self.hello.clone(),
         };
-        let resp = (p.func)(m);
+        let resp = (func)(m);
         Box::new(futures::future::ok(resp))
     }
 }

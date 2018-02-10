@@ -19,11 +19,6 @@ pub struct Hyperap<D> where D: HyperapCore + 'static {
     open_browser: bool,
     routes: Vec<Route<D>>,
 }
-pub struct MiddlewareParam<M, R, Resp> {
-    pub req: Request,
-    pub route_definition: Arc<Option<R>>,
-    pub func: Arc<Fn(M) -> Resp>,
-}
 pub trait HyperapCore {
     // the main param type that is being obtained by controller
     type M; 
@@ -31,7 +26,7 @@ pub trait HyperapCore {
     type R; 
     type Resp; 
     fn default_route(Self::M) -> Self::Resp;
-    fn middleware(&self, param: MiddlewareParam<Self::M, Self::R, Self::Resp>) -> Box<Future<Item = Response, Error = hyper::Error>>;
+    fn middleware(&self, req: Request, func: Arc<Fn(Self::M) -> Self::Resp>, route_definition: Arc<Option<Self::R>>) -> Box<Future<Item = Response, Error = hyper::Error>>;
 }
 impl<D> Hyperap<D> where D: HyperapCore + 'static, {
     pub fn new(d: D) -> Hyperap<D> {
@@ -129,24 +124,12 @@ impl<D> Service for Hyperap<D> where D: HyperapCore + 'static {
         let path = req.path().to_owned();
         let matched_index = matched_index(&(self.routes), 0, method, path);
         if (self.routes).len() == 0 {
-            self.app.middleware(MiddlewareParam {
-                req: req,
-                func: Arc::new(D::default_route).clone(),
-                route_definition: Arc::new(None),
-            })
+            self.app.middleware(req, Arc::new(D::default_route).clone(), Arc::new(None))
         } else if matched_index >= (self.routes).len() {
-            self.app.middleware(MiddlewareParam {
-                req: req,
-                func: Arc::new(D::default_route).clone(),
-                route_definition: Arc::new(None),
-            })
+            self.app.middleware(req, Arc::new(D::default_route).clone(), Arc::new(None))
         } else {
             let r = &(self.routes)[matched_index];
-            self.app.middleware(MiddlewareParam {
-                req: req,
-                func: r.func.clone(),
-                route_definition: (r.definition).clone(),
-            })
+            self.app.middleware(req, r.func.clone(), (r.definition).clone())
         }
     }
 }
