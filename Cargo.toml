@@ -1,6 +1,6 @@
 [package]
 name = "hyperap"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Ng Heng Lim <nghenglim@gmail.com>"]
 license = "MIT"
 description = "Hyperap - Hyper wrapper. A very minimal wrapper for Hyper.rs to create a working webserver."

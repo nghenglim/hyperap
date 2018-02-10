@@ -4,67 +4,18 @@
 Hyperap - Hyper wrapper. A very minimal wrapper for Hyper.rs to create a working webserver. 
 
 ## How To Use
-~~~rs
-extern crate hyperap;
-use hyperap::hyper::server::{Response};
-use hyperap::hyper::{Method};
-use hyperap::server::{HyperApp, Middleware, MiddlewareParam};
-use hyperap::response::{resp};
+code refer to `./src/main.rs`
 
-fn get_static(_a: MiddlewareResult) -> Response {
-    hyperap::server::static_file("Cargo.toml")
-}
-fn hello_world(a: MiddlewareResult) -> Response {
-    resp(a.hello.clone() + " at path " + &a.path)
-}
-fn not_found_route(a: MiddlewareResult) -> Response {
-    resp("not found route at path ".to_owned() + &a.path)
-}
-pub struct App {
-    pub hello: String,
-}
-pub struct MiddlewareResult {
-    path: String,
-    hello: String,
-}
-#[derive(Debug)]
-pub struct RouteDefinition {
-    parameters: Vec<RouteDefinitionParameters>
-}
-#[derive(Debug)]
-pub struct RouteDefinitionParameters {
-    in_: String,
-    name: String,
-}
-impl Middleware for App {
-    type M = MiddlewareResult;
-    type R = RouteDefinition;
-    fn middleware(&self, p: MiddlewareParam<MiddlewareResult, Self::R>) -> Response {
-        let m = MiddlewareResult {
-            path: p.req.path().to_owned(),
-            hello: self.hello.clone(),
-        };
-        (p.func)(m)
-    }
-}
-fn main() {
-    let the_app = App {
-        hello: "Hello World".to_owned(),
-    };
-    let mut app = HyperApp::new(the_app);
-    app.open_browser(true);
-    app.set_default_route(not_found_route);
-    app.add_pure_route(Method::Get, "/static", get_static);
-    app.add_route(Method::Get, "/", hello_world, RouteDefinition {
-        parameters: vec![RouteDefinitionParameters {
-            in_: "query".to_owned(),
-            name: "offset".to_owned(),
-        }]
-    });
-    app.port(3000);
-    app.run();
-}
-~~~
+to see how it works
+```bash
+git clone https://github.com/nghenglim/hyperap
+cd hyperap
+cargo run
+```
+
+## NOTE
+- Currently using hyper 0.11 branch which is async in nature, however coding in async will not clean unless the async/await rust feature come out
+- No point on creating synchronous version of rust webserver because NodeJS/Java/Go webserver is asynchronous version.
 
 ## TODO
 - [ ] more functional on the add_route

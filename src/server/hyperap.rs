@@ -4,49 +4,46 @@ extern crate open;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use self::futures::future::Future;  
 use self::hyper::server::{Http, Request, Response, Service};
-use self::hyper::{Method, StatusCode};
+use self::hyper::{Method};
 use std::sync::Arc;
 
-struct Route<D> where D: Middleware + 'static {
+struct Route<D> where D: HyperapCore + 'static {
     method: Method,
     path: String,
     definition: Arc<Option<D::R>>,
-    func: Arc<Fn(D::M) -> Response>,
+    func: Arc<Fn(D::M) -> D::Resp>,
 }
-pub struct HyperApp<D> where D: Middleware + 'static {
+pub struct Hyperap<D> where D: HyperapCore + 'static {
     port: u16,
     app: D,
     open_browser: bool,
     routes: Vec<Route<D>>,
-    default_route: Arc<Fn(D::M) -> Response>,
 }
-pub fn not_found_route<D>(_a: D) -> Response  where D: 'static {
-    Response::new().with_status(StatusCode::NotFound)
-}
-pub struct MiddlewareParam<M, R> {
+pub struct MiddlewareParam<M, R, Resp> {
     pub req: Request,
     pub route_definition: Arc<Option<R>>,
-    pub func: Arc<Fn(M) -> Response>,
+    pub func: Arc<Fn(M) -> Resp>,
 }
-pub trait Middleware {
+pub trait HyperapCore {
     // the main param type that is being obtained by controller
     type M; 
     // the route definition such as swagger definition which is mainly for middleware to use
     type R; 
-    fn middleware(&self, param: MiddlewareParam<Self::M, Self::R>) -> Response;
+    type Resp; 
+    fn default_route(Self::M) -> Self::Resp;
+    fn middleware(&self, param: MiddlewareParam<Self::M, Self::R, Self::Resp>) -> Box<Future<Item = Response, Error = hyper::Error>>;
 }
-impl<D> HyperApp<D> where D: Middleware + 'static, {
-    pub fn new(d: D) -> HyperApp<D> {
-        HyperApp {
+impl<D> Hyperap<D> where D: HyperapCore + 'static, {
+    pub fn new(d: D) -> Hyperap<D> {
+        Hyperap {
             port: 3000,
             app: d,
             open_browser: true,
             routes: Vec::new(),
-            default_route: Arc::new(not_found_route::<D::M>),
         }
     }
     pub fn add_route<F: 'static, S: Into<String>>(&mut self, method: Method, path: S, func: F, definition: D::R) -> &mut Self where
-    F: Fn(D::M) -> Response {
+    F: Fn(D::M) -> D::Resp {
         let route = Route {
             method: method,
             path: path.into(),
@@ -57,7 +54,7 @@ impl<D> HyperApp<D> where D: Middleware + 'static, {
         self
     }
     pub fn add_pure_route<F: 'static, S: Into<String>>(&mut self, method: Method, path: S, func: F) -> &mut Self where
-    F: Fn(D::M) -> Response {
+    F: Fn(D::M) -> D::Resp {
         let route = Route {
             method: method,
             path: path.into(),
@@ -65,11 +62,6 @@ impl<D> HyperApp<D> where D: Middleware + 'static, {
             func: Arc::new(func),
         };
         self.routes.push(route);
-        self
-    }
-    pub fn set_default_route<F: 'static>(&mut self, func: F) -> &mut Self where
-    F: Fn(D::M) -> Response {
-        self.default_route = Arc::new(func);
         self
     }
     pub fn production(&mut self) -> &mut Self {
@@ -112,7 +104,7 @@ impl<D> HyperApp<D> where D: Middleware + 'static, {
         let _server = server.run().unwrap();
     }
 }
-fn matched_index<D>(v: &Vec<Route<D>>, i: usize, method: Method, path: String) -> usize where D: Middleware + 'static {
+fn matched_index<D>(v: &Vec<Route<D>>, i: usize, method: Method, path: String) -> usize where D: HyperapCore + 'static {
     if v.len() == i {
         i
     } else {
@@ -124,7 +116,7 @@ fn matched_index<D>(v: &Vec<Route<D>>, i: usize, method: Method, path: String) -
         }
     }
 }
-impl<D> Service for HyperApp<D> where D: Middleware + 'static {
+impl<D> Service for Hyperap<D> where D: HyperapCore + 'static {
     // boilerplate hooking up hyper's server types
     type Request = Request;
     type Response = Response;
@@ -136,16 +128,16 @@ impl<D> Service for HyperApp<D> where D: Middleware + 'static {
         let method = req.method().to_owned();
         let path = req.path().to_owned();
         let matched_index = matched_index(&(self.routes), 0, method, path);
-        let response = if (self.routes).len() == 0 {
+        if (self.routes).len() == 0 {
             self.app.middleware(MiddlewareParam {
                 req: req,
-                func: self.default_route.clone(),
+                func: Arc::new(D::default_route).clone(),
                 route_definition: Arc::new(None),
             })
         } else if matched_index >= (self.routes).len() {
             self.app.middleware(MiddlewareParam {
                 req: req,
-                func: self.default_route.clone(),
+                func: Arc::new(D::default_route).clone(),
                 route_definition: Arc::new(None),
             })
         } else {
@@ -155,8 +147,6 @@ impl<D> Service for HyperApp<D> where D: Middleware + 'static {
                 func: r.func.clone(),
                 route_definition: (r.definition).clone(),
             })
-        };
-
-        Box::new(futures::future::ok(response))
+        }
     }
 }
