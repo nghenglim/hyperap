@@ -4,12 +4,12 @@
 Hyperap - Hyper wrapper. A very minimal wrapper for Hyper.rs to create a working webserver. 
 
 ## How To Use
-code refer to `./src/main.rs`
+code refer to `./src/examples/simple`
 
 to see how it works
 ```bash
 git clone https://github.com/nghenglim/hyperap
-cd hyperap
+cd hyperap/examples/simple
 cargo run
 ```
 

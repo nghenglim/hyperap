@@ -1,0 +1,9 @@
+[package]
+name = "hyperap_example"
+version = "0.1.0"
+authors = ["Ng Heng Lim <nghenglim@gmail.com>"]
+license = "MIT"
+
+[dependencies]
+hyperap = "0.4.0"
+swagger_spec = "0.2.0"

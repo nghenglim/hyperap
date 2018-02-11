@@ -1,10 +1,12 @@
 extern crate hyperap;
-extern crate futures;
+extern crate swagger_spec;
 use hyperap::hyper::server::{Response, Request};
 use hyperap::hyper::{self, Method, StatusCode};
 use hyperap::server::{Hyperap, HyperapCore};
 use hyperap::response::{resp};
-use futures::future::Future;  
+use hyperap::futures;
+use hyperap::futures::future::Future;  
+use swagger_spec::{Parameter, PathItem, ParameterIn, Schema, DataType};
 use std::sync::Arc;
 
 fn get_static(_a: MiddlewareResult) -> Response {
@@ -20,14 +22,20 @@ pub struct MiddlewareResult {
     path: String,
     hello: String,
 }
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct RouteDefinition {
-    parameters: Vec<RouteDefinitionParameters>
+    pub swagger: PathItem,
 }
-#[derive(Debug)]
-pub struct RouteDefinitionParameters {
-    in_: String,
-    name: String,
+impl RouteDefinition {
+    pub fn new() -> RouteDefinition {
+        RouteDefinition {
+            swagger: PathItem::new(),
+        }
+    }
+    pub fn add_parameter(&mut self, p: Parameter) -> &mut Self {
+        self.swagger.add_parameter(p);
+        self
+    }
 }
 impl HyperapCore for App {
     type M = MiddlewareResult;
@@ -52,12 +60,19 @@ fn main() {
     let mut app = Hyperap::new(the_app);
     app.open_browser(true);
     app.add_pure_route(Method::Get, "/static", get_static);
-    app.add_route(Method::Get, "/", hello_world, RouteDefinition {
-        parameters: vec![RouteDefinitionParameters {
-            in_: "query".to_owned(),
-            name: "offset".to_owned(),
-        }]
-    });
-    app.port(3000);
+    app.add_route(Method::Get, "/", hello_world, RouteDefinition::new()
+        .add_parameter(
+            Parameter::new()
+            .schema(
+                Schema::new()
+                .type_(DataType::Integer)
+                .clone()
+            )
+            .name("limit")
+            .in_(ParameterIn::Query)
+            .clone()
+        )
+        .clone()
+    );
     app.run();
 }
